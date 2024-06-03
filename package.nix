@@ -1,4 +1,4 @@
-{ lib, stdenv, cmake, ninja }:
+{ lib, stdenv, cmake, ninja, eigen }:
 stdenv.mkDerivation {
   pname = "parallelism";
   version = "0.1.0";
@@ -11,5 +11,6 @@ stdenv.mkDerivation {
   ];
 
   propagatedBuildInputs = [
+    eigen
   ];
 }

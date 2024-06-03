@@ -1,7 +1,10 @@
+#include <Eigen/Dense>
+
 #include <algorithm>
 #include <chrono>
 #include <execution>
 #include <iostream>
+#include <thread>
 #include <vector>
 
 struct Timer {
@@ -82,6 +85,122 @@ int main(int argc, char *argv[]) {
       Timer timer;
       tmp = std::reduce(std::execution::par_unseq, vec0.cbegin(), vec0.cend(),
                         0.0, std::plus<double>());
+    }
+    std::cout << "sum: " << tmp << "\n\n";
+  }
+
+  std::vector<Eigen::Vector3d> vec1{
+      {0.0, 0.0, 0.0},   {1.0, 1.0, 1.0},    {2.0, 2.0, 2.0},
+      {3.0, 3.0, 3.0},   {4.0, 4.0, 4.0},    {5.0, 5.0, 5.0},
+      {6.0, 6.0, 6.0},   {7.0, 7.0, 7.0},    {8.0, 8.0, 8.0},
+      {9.0, 9.0, 9.0},   {10.0, 10.0, 10.0}, {11.0, 11.0, 11.0},
+      {12.0, 12.0, 12.0}};
+
+  std::cout << "sequential summing vector of vec3\n";
+  {
+    Eigen::Vector3d tmp;
+    {
+      Timer timer;
+      tmp.x() = std::transform_reduce(
+          vec1.cbegin(), vec1.cend(), 0.0, std::plus<double>(),
+          [](const Eigen::Vector3d x) { return x.x(); });
+      tmp.y() = std::transform_reduce(
+          vec1.cbegin(), vec1.cend(), 0.0, std::plus<double>(),
+          [](const Eigen::Vector3d x) { return x.y(); });
+      tmp.z() = std::transform_reduce(
+          vec1.cbegin(), vec1.cend(), 0.0, std::plus<double>(),
+          [](const Eigen::Vector3d x) { return x.z(); });
+    }
+    std::cout << "sum: " << tmp << "\n\n";
+  }
+
+  std::cout << "parallel sequential summing vector of vec3\n";
+  {
+    Eigen::Vector3d tmp;
+    {
+      Timer timer;
+      tmp.x() = std::transform_reduce(
+          std::execution::par, vec1.cbegin(), vec1.cend(), 0.0,
+          std::plus<double>(), [](const Eigen::Vector3d x) { return x.x(); });
+      tmp.y() = std::transform_reduce(
+          std::execution::par, vec1.cbegin(), vec1.cend(), 0.0,
+          std::plus<double>(), [](const Eigen::Vector3d x) { return x.y(); });
+      tmp.z() = std::transform_reduce(
+          std::execution::par, vec1.cbegin(), vec1.cend(), 0.0,
+          std::plus<double>(), [](const Eigen::Vector3d x) { return x.z(); });
+    }
+    std::cout << "sum: " << tmp << "\n\n";
+  }
+
+  std::cout << "parallel unsequential summing vector of vec3\n";
+  {
+    Eigen::Vector3d tmp;
+    {
+      Timer timer;
+      tmp.x() = std::transform_reduce(
+          std::execution::par_unseq, vec1.cbegin(), vec1.cend(), 0.0,
+          std::plus<double>(), [](const Eigen::Vector3d x) { return x.x(); });
+      tmp.y() = std::transform_reduce(
+          std::execution::par_unseq, vec1.cbegin(), vec1.cend(), 0.0,
+          std::plus<double>(), [](const Eigen::Vector3d x) { return x.y(); });
+      tmp.z() = std::transform_reduce(
+          std::execution::par_unseq, vec1.cbegin(), vec1.cend(), 0.0,
+          std::plus<double>(), [](const Eigen::Vector3d x) { return x.z(); });
+    }
+    std::cout << "sum: " << tmp << "\n\n";
+  }
+
+  std::cout << "multithreaded parallel unsequential summing vector of vec3\n";
+  {
+    Eigen::Vector3d tmp;
+    {
+      Timer timer;
+      std::jthread xThread([&]() {
+        tmp.x() = std::transform_reduce(
+            std::execution::par_unseq, vec1.cbegin(), vec1.cend(), 0.0,
+            std::plus<double>(), [](const Eigen::Vector3d x) { return x.x(); });
+      });
+      std::jthread yThread([&]() {
+        tmp.y() = std::transform_reduce(
+            std::execution::par_unseq, vec1.cbegin(), vec1.cend(), 0.0,
+            std::plus<double>(), [](const Eigen::Vector3d x) { return x.y(); });
+      });
+      std::jthread zThread([&]() {
+        tmp.z() = std::transform_reduce(
+            std::execution::par_unseq, vec1.cbegin(), vec1.cend(), 0.0,
+            std::plus<double>(), [](const Eigen::Vector3d x) { return x.z(); });
+      });
+    }
+    std::cout << "sum: " << tmp << "\n\n";
+  }
+
+  std::cout << "try 2 sequential summing vector of vec3\n";
+  {
+    Eigen::Vector3d tmp = Eigen::Vector3d::Zero();
+    {
+      Timer timer;
+      tmp = std::reduce(vec1.cbegin(), vec1.cend(), tmp);
+    }
+    std::cout << "sum: " << tmp << "\n\n";
+  }
+
+  std::cout << "try 2 parallel sequential summing vector of vec3\n";
+  {
+    Eigen::Vector3d tmp = Eigen::Vector3d::Zero();
+    {
+      Timer timer;
+      tmp = std::reduce(std::execution::par, vec1.cbegin(), vec1.cend(), tmp);
+    }
+    std::cout << "sum: " << tmp << "\n\n";
+  }
+
+  std::cout << "try 2 parallel unsequenced summing vector of vec3\n";
+  {
+    Eigen::Vector3d tmp = Eigen::Vector3d::Zero();
+    {
+      Timer timer;
+      tmp = std::reduce(std::execution::par_unseq, vec1.cbegin(), vec1.cend(),
+                        tmp);
     }
     std::cout << "sum: " << tmp << "\n\n";
   }
